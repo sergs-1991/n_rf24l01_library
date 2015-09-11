@@ -21,12 +21,12 @@
 
 #include "n_rf24l01.h"
 
-static const n_rf24l01_backend_t n_rf24l01_backend;
+static n_rf24l01_backend_t n_rf24l01_backend;
 
 
 // transmit one byte, n_rf24l01 must be in transmit mode
 //======================================================================================================
-int n_rf24l01_transmit_byte( u_char byte )
+void n_rf24l01_transmit_byte( u_char byte )
 {
 	n_rf24l01_backend.send_cmd( W_TX_PAYLOAD, NULL, &byte, 1, 1 );
 
@@ -81,7 +81,7 @@ static void read_register( u_char reg_addr, u_char* reg_val )
 	// clear first command-specified bits (for R_REGISTER and W_REGISTER)
 	reg_addr &= REG_ADDR_BITS;
 
-	n_rf24l01_backend.send_cmd( R_REGISTER | reg_addr, NULL, &reg_val, 1, 0 );
+	n_rf24l01_backend.send_cmd( R_REGISTER | reg_addr, NULL, reg_val, 1, 0 );
 }
 
 // clear specified bits in register
@@ -144,11 +144,11 @@ static void clear_pending_interrupts( void )
 //======================================================================================================
 int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend_local )
 {
-	if( !n_rf24l01_backend )
+	if( !n_rf24l01_backend_local )
 		return 0;
 
 	// get copy of callback set
-	n_rf24l01_backend = n_rf24l01_backend_local;
+	memcpy( &n_rf24l01_backend, n_rf24l01_backend_local, sizeof(n_rf24l01_backend) );
 
 	// turn on n_rf24l01 transceiver
 	set_bits( CONFIG_RG, PWR_UP);

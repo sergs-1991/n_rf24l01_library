@@ -54,16 +54,24 @@ typedef struct n_rf24l01_backend_t
 
 } n_rf24l01_backend_t;
 
-// call this function before start work with library
-extern int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend );
-
-// transmit, over n_rf24l01 transceiver one byte @byte to space
-extern void n_rf24l01_transmit_byte( u_char byte );
-
 // upper and bottom halfs of n_rf24l01 irq handler
 // upper half can be executed in hardware interrupt context
 // bottom half mustn't be executed in hardware interrupt context, due to a big execution time
 extern int n_rf24l01_upper_half_irq( void );
 extern int n_rf24l01_bottom_half_irq( void );
+
+// API:
+
+// call this function before start work with library
+extern int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend );
+
+// call these functions before transmit/receive operations
+extern void prepare_to_transmit( void );
+extern void prepare_to_receive( void );
+
+// transmit, over n_rf24l01 transceiver one byte @byte to space
+extern void n_rf24l01_transmit_byte( u_char byte );
+
+
 
 #endif // N_RF24L01_PORT_H

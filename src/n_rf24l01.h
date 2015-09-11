@@ -36,12 +36,10 @@
 // max amount of command's data, in bytes
 #define COMMAND_DATA_SIZE 32
 
-void prepare_to_transmit( void );
-void prepare_to_receive( void );
-void write_register( u_char reg_addr, u_char reg_val );
-void read_register( u_char reg_addr, u_char* reg_val );
-void clear_bits( u_char reg_addr, u_char bits );
-void set_bits( u_char reg_addr, u_char bits );
-void clear_pending_interrupts( void );
+static void write_register( u_char reg_addr, u_char reg_val );
+static void read_register( u_char reg_addr, u_char* reg_val );
+static void clear_bits( u_char reg_addr, u_char bits );
+static void set_bits( u_char reg_addr, u_char bits );
+static void clear_pending_interrupts( void );
 
 #endif // N_RF24L01_H
