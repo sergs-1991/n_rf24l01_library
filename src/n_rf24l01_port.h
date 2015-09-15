@@ -63,6 +63,7 @@ extern int n_rf24l01_bottom_half_irq( void );
 // API:
 
 // call this function before start work with library
+// returns -1, if failed
 extern int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend );
 
 // call these functions before transmit/receive operations

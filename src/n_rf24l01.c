@@ -140,12 +140,13 @@ static void clear_pending_interrupts( void )
 	write_register( STATUS_RG, status_reg );
 }
 
-//  make all initialization step to prepare n_rf24l01 to work
+// make all initialization step to prepare n_rf24l01 to work
+// returns -1, if failed
 //======================================================================================================
 int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend_local )
 {
 	if( !n_rf24l01_backend_local )
-		return 0;
+		return -1;
 
 	// get copy of callback set
 	memcpy( &n_rf24l01_backend, n_rf24l01_backend_local, sizeof(n_rf24l01_backend) );
@@ -160,5 +161,5 @@ int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend_local )
 	// set the lowermost transmit power
 	clear_bits( RF_SETUP_RG, 0x06 );
 
-	return 1;
+	return 0;
 }
