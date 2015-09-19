@@ -15,9 +15,8 @@
 // CE - (output pin)
 // IRQ - is active low (input pin)
 
-
 typedef unsigned char u_char;
-typedef unsigned int  u_int;
+typedef unsigned int u_int;
 
 // this function sets/clears CE pin
 // value - value to set onto pin
@@ -39,18 +38,18 @@ typedef void (*usleep_ptr)( u_int ms );
 // you must provide these callback functions to proper work of library
 typedef struct n_rf24l01_backend_t
 {
-	// this function controls CE pin behavior, 0 - set logical '0'
-	set_up_ce_pin_ptr set_up_ce_pin;
+  // this function controls CE pin behavior, 0 - set logical '0'
+  set_up_ce_pin_ptr set_up_ce_pin;
 
-	// this function must implements sending command and sending/receiving command's data over spi
-	// first you must send @cmd, retrieve answer and store it to @status_reg, and then send/receive @num bytes from
-	// @data depend of @type value.
-	send_cmd_ptr send_cmd;
+  // this function must implements sending command and sending/receiving command's data over spi
+  // first you must send @cmd, retrieve answer and store it to @status_reg, and then send/receive @num bytes from
+  // @data depend of @type value.
+  send_cmd_ptr send_cmd;
 
-	// you can on you own decide how to put to sleep library execution flow,
-	// for example: short sleep interval - just 'for/while' loop,
-	//              long - something else
-	usleep_ptr usleep;
+  // you can on you own decide how to put to sleep library execution flow,
+  // for example: short sleep interval - just 'for/while' loop,
+  //              long - something else
+  usleep_ptr usleep;
 
 } n_rf24l01_backend_t;
 
@@ -72,7 +71,5 @@ extern void prepare_to_receive( void );
 
 // transmit, over n_rf24l01 transceiver one byte @byte to space
 extern void n_rf24l01_transmit_byte( u_char byte );
-
-
 
 #endif // N_RF24L01_PORT_H
