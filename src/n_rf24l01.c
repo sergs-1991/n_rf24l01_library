@@ -151,6 +151,8 @@ int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend_local )
   // get copy of callback set
   memcpy( &n_rf24l01_backend, n_rf24l01_backend_local, sizeof( n_rf24l01_backend ) );
 
+  write_register( EN_AA_RG, 0x00 );
+
   // turn on n_rf24l01 transceiver
   set_bits( CONFIG_RG, PWR_UP );
   n_rf24l01_backend.usleep( 1500 );
