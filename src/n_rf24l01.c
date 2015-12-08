@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "uart_service.h"
+
 #include "n_rf24l01.h"
 
 static n_rf24l01_backend_t n_rf24l01_backend;
@@ -140,6 +142,35 @@ static void clear_pending_interrupts( void )
   write_register( STATUS_RG, status_reg );
 }
 
+void read_payload( void )
+{
+  u_char buf = 0;
+  char str[3] = { 0, };
+
+  clear_pending_interrupts();
+  n_rf24l01_backend.send_cmd( R_RX_PAYLOAD, NULL, &buf, 1, 0 );
+
+  sprintf( str, "%c.", buf );
+  uart_send_str( str );
+
+  /*
+  static char buf[25];
+  static char* temp = buf;
+  led_flash_irq( 450, 150 );
+  n_rf24l01_backend.send_cmd( R_RX_PAYLOAD, NULL, temp, 1, 0 );
+
+  if( ++temp >= (buf + sizeof(buf) - 1) )
+  {
+    *temp = 0;
+    temp = buf;
+  }
+
+  if( strstr( buf, "Lena" ) )
+    led_flash_irq( 450, 150 );
+
+  clear_pending_interrupts();*/
+}
+
 // make all initialization step to prepare n_rf24l01 to work
 // returns -1, if failed
 //======================================================================================================
@@ -157,7 +188,7 @@ int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend_local )
   set_bits( CONFIG_RG, PWR_UP );
   n_rf24l01_backend.usleep( 1500 );
 
-  // set data field size to 1 byte (we will transmit 1 byte for time)
+  // set data field size to 32 byte (we will transmit 32 bytes for time)
   write_register( RX_PW_P0_RG, 0x01 );
 
   // set the lowermost transmit power
