@@ -7,7 +7,7 @@
 //  CPOL = 0, CPHA = 0
 //  msbit first
 //  8 bits per word
-//  spi speed up to 8MHz
+//  spi speed up to 10MHz
 //  CSN - is active low
 //  Note: CSN pin must be hold unchanged during command transaction
 //        (from sending cmd to sending/receiving cmd's data)
@@ -18,58 +18,132 @@
 typedef unsigned char u_char;
 typedef unsigned int u_int;
 
-// this function sets/clears CE pin
-// value - value to set onto pin
 typedef void (*set_up_ce_pin_ptr)( u_char value );
+typedef void (*send_cmd_ptr)( u_char cmd, u_char* status_reg, u_char* data, u_char num, u_char direction );
+typedef void (*usleep_ptr)( u_int delay_mks );
+typedef void (*handle_received_data_ptr)( void* data, u_int num );
 
-// send a command to n_rf24l01
-// cmd - command to send
-// status_reg - pointer n_rf24l01 status register will be written to
-// data - pointer to data to be written to or to be read from n_rf24l01, depends on @type,
-//		 real amount of data to read from/write to is depends on @num parameter
-// num - amount of bytes to read or write (except command byte) (max amount is COMMAND_DATA_SIZE)
-// type - type of operation: 1 - write, 0 - read
-// return -1 if failed, 0 otherwise
-typedef void (*send_cmd_ptr)( u_char cmd, u_char* status_reg, u_char* data, u_char num, u_char type );
 
-// this function put to sleep library execution flow, max sleep interval ~1500 ms
-typedef void (*usleep_ptr)( u_int ms );
-
-// you must provide these callback functions to proper work of library
+/**
+ * @brief structure describes backend's callbacks
+ *
+ * Note: you must provide these callback functions to proper work of library
+ */
 typedef struct n_rf24l01_backend_t
 {
-  // this function controls CE pin behavior, 0 - set logical '0'
+  /**
+   * @brief control CE pin state
+   *
+   * void (*set_up_ce_pin_ptr)( u_char value );
+   *
+   * @param[in] value - new state of CE pin (0 - '0' logical level, 1 - '1' logical level)
+   */
   set_up_ce_pin_ptr set_up_ce_pin;
 
-  // this function must implements sending command and sending/receiving command's data over spi
-  // first you must send @cmd, retrieve answer and store it to @status_reg, and then send/receive @num bytes from
-  // @data depend of @type value.
+  /**
+   * @brief send command to n_rf24l01 over SPI peripheral
+   *
+   * void (*send_cmd_ptr)( u_char cmd, u_char* status_reg, u_char* data, u_char num, u_char direction );
+   *
+   * @param[in]     cmd        - command to send
+   * @param[out]    status_reg - pointer n_rf24l01 status register will be written to
+   * @param[in,out] data       - pointer to data to be written to or to be read from n_rf24l01, depends on @type,
+   *                             real amount of data to read from/write to is depends on @num parameter
+   * @param[in]     num        - amount of bytes to read or write (except command byte)
+   * @param[in]     direction  - type of operation: 1 - write, 0 - read
+   * @return -1 if failed, 0 otherwise
+   *
+   * Note: this function must implements sending command and sending/receiving command's data over spi.
+   *       First you must send @cmd, retrieve answer and store it to @status_reg, and then send @num bytes from @data,
+   *       or receive @num bytes and store to @data depend of @direction value.
+   *       @status_reg may be NULL - just throw respond of first spi transaction (@cmd).
+   *       @num may be 0 - in this case just send @cmd and store respond to @status_reg, if @status_reg isn't NULL.
+   *       Memory allocation occurred on calling side.
+   */
   send_cmd_ptr send_cmd;
 
-  // you can on you own decide how to put to sleep library execution flow,
-  // for example: short sleep interval - just 'for/while' loop,
-  //              long - something else
+  /**
+   * @brief put to sleep library execution flow, max sleep interval ~1500 ms
+   *
+   * void (*usleep_ptr)( u_int delay_mks );
+   *
+   * @param[in] delay_mks - time in microseconds to sleep
+   *
+   * Note: you can on you own decide how to put to sleep library execution flow,
+   *       for example: short sleep interval - just 'for/while' loop,
+   *                    long - something else.
+   *       library execution flow mustn't obtain control due @delay_mks :-) K.O.
+   */
   usleep_ptr usleep;
+
+  /**
+   * @brief handle received data
+   *
+   * void (*handle_received_data_ptr)( void* data, u_int num );
+   *
+   * @param[in] data - received from n_rf24l01
+   * @param[in] num  - amount of received data, in bytes
+   *
+   */
+  handle_received_data_ptr handle_received_data;
 
 } n_rf24l01_backend_t;
 
-// upper and bottom halfs of n_rf24l01 irq handler
-// upper half can be executed in hardware interrupt context
-// bottom half mustn't be executed in hardware interrupt context, due to a big execution time
-extern int n_rf24l01_upper_half_irq( void );
-extern int n_rf24l01_bottom_half_irq( void );
+// -------------------------------------- IRQ handler --------------------------------------------------
 
-// API:
+/**
+ * @brief upper half of n_rf24l01 irq handler
+ *
+ * Note: it's desirable to call this function from in hardware interrupt context
+ */
+//======================================================================================================
+void n_rf24l01_upper_half_irq( void );
 
-// call this function before start work with library
-// returns -1, if failed
-extern int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend );
+/**
+ * @brief bottom half of n_rf24l01 irq handler
+ *
+ * Note: bottom half mustn't be executed in hardware interrupt context, due to a big execution time
+ */
+//======================================================================================================
+void n_rf24l01_bottom_half_irq( void );
 
-// call these functions before transmit/receive operations
-extern void prepare_to_transmit( void );
-extern void prepare_to_receive( void );
 
-// transmit, over n_rf24l01 transceiver one byte @byte to space
-extern void n_rf24l01_transmit_byte( u_char byte );
+// ----------------------------------------- API -------------------------------------------------------
+
+
+/**
+ * @brief configure library and transceiver
+ *
+ * @param[in] - pointer to structure which is storage for callbacks
+ * @return -1, if failed
+ *
+ * Note: call this function before start work with library
+ */
+//======================================================================================================
+int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend );
+
+
+/**
+ * @brief configure n_rf24l01 to be a transmitter
+ */
+//======================================================================================================
+void n_rf24l01_prepare_to_transmit( void );
+
+/**
+ * @brief configure n_rf24l01 to be a receiver
+ */
+//======================================================================================================
+void n_rf24l01_prepare_to_receive( void );
+
+/**
+ * @brief transmit packages through n_rf24l01 transceiver
+ *
+ * @param[in]  data - package's data to transmit
+ * @param[num] num  - amount of data to transmit, in bytes
+ *
+ * Note: this is block call (until all data are transmitted)
+ */
+//======================================================================================================
+void n_rf24l01_transmit_pkgs( const void* data, u_int num );
 
 #endif // N_RF24L01_PORT_H

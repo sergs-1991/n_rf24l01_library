@@ -27,8 +27,12 @@
 // bits definition:
 
 //  CONFIG register
-#define PRIM_RX	0x01
 #define PWR_UP 	0x02
+#define PRIM_RX	0x01
+
+//  STATUS register
+#define RX_DR   0x40
+#define TX_DS   0x20
 
 // each register has 5 bits address in registers map
 // used for R_REGISTER and W_REGISTER commands
@@ -37,10 +41,7 @@
 // max amount of command's data, in bytes
 #define COMMAND_DATA_SIZE 32
 
-static void write_register( u_char reg_addr, u_char reg_val );
-static void read_register( u_char reg_addr, u_char* reg_val );
-static void clear_bits( u_char reg_addr, u_char bits );
-static void set_bits( u_char reg_addr, u_char bits );
-static void clear_pending_interrupts( void );
+// size of package to transmit/receive
+#define PKG_SIZE 0x20
 
 #endif // N_RF24L01_H
