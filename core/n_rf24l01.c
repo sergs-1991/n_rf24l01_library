@@ -25,7 +25,12 @@
 
 static n_rf24l01_backend_t n_rf24l01_backend;
 
+/*
+It's a wrapper/backend implementation which uses a standard Linux
+device driver - spi_dev.
 
+
+ */
 // write register with @reg_addr from @reg_val
 // reg_addr - address of register to be written to
 // reg_val - variable register's content will be read from

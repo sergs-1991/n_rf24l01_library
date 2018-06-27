@@ -1,7 +1,7 @@
 #ifndef N_RF24L01_H
 #define N_RF24L01_H
 
-#include "n_rf24l01_port.h"
+#include "../n_rf24l01_core.h"
 
 // commands set
 #define R_REGISTER 		0x00
