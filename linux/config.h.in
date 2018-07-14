@@ -5,4 +5,8 @@
 
 #cmakedefine SPI_DEV_BASED
 
+#cmakedefine INTERRUPT_LINE_PIN_NUM @INTERRUPT_LINE_PIN_NUM@
+#cmakedefine CE_LINE_PIN_NUM @CE_LINE_PIN_NUM@
+#cmakedefine SPI_DEVICE_FILE "@SPI_DEVICE_FILE@"
+
 #endif
