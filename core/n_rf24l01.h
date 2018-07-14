@@ -33,6 +33,7 @@
 //  STATUS register
 #define RX_DR   0x40
 #define TX_DS   0x20
+#define MAX_RT  0x10
 
 // each register has 5 bits address in registers map
 // used for R_REGISTER and W_REGISTER commands

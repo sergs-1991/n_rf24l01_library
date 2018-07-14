@@ -25,12 +25,7 @@
 
 static n_rf24l01_backend_t n_rf24l01_backend;
 
-/*
-It's a wrapper/backend implementation which uses a standard Linux
-device driver - spi_dev.
 
-
- */
 // write register with @reg_addr from @reg_val
 // reg_addr - address of register to be written to
 // reg_val - variable register's content will be read from
@@ -300,4 +295,58 @@ int n_rf24l01_init( const n_rf24l01_backend_t* n_rf24l01_backend_local )
   clear_bits( RF_SETUP_RG, 0x06 );
 
   return 0;
+}
+
+
+/* for debug purpose only */
+
+
+union data_dbg
+{
+  u_char char_storage[5];  /* RX_ADDR_P0_RG, RX_ADDR_P1_RG and TX_ADDR_RG are 40-bits registers */
+  uint64_t reg_val;
+};
+
+static n_rf24l01_backend_t n_rf24l01_backend_dbg;
+
+int n_rf24l01_init_dbg( const n_rf24l01_backend_t* backend )
+{
+  if( !backend )
+    return -1;
+
+  memcpy( &n_rf24l01_backend_dbg, backend, sizeof( n_rf24l01_backend_dbg ) );
+
+  return 0;
+}
+
+uint64_t n_rf24l01_read_register_dbg( u_char reg_addr )
+{
+  union data_dbg tmp;
+
+  memset( &tmp, 0, sizeof(tmp) );
+
+  /* clear first command-specified bits (for R_REGISTER and W_REGISTER) */
+  reg_addr &= REG_ADDR_BITS;
+
+  if( reg_addr == RX_ADDR_P0_RG || reg_addr == RX_ADDR_P1_RG || reg_addr == TX_ADDR_RG )
+    n_rf24l01_backend_dbg.send_cmd( R_REGISTER | reg_addr, NULL, tmp.char_storage, 5, 0 );
+  else
+    n_rf24l01_backend_dbg.send_cmd( R_REGISTER | reg_addr, NULL, tmp.char_storage, 1, 0 );
+
+  return tmp.reg_val;
+}
+
+void n_rf24l01_write_register_dbg( u_char reg_addr, uint64_t value )
+{
+  union data_dbg tmp;
+
+  tmp.reg_val = value;
+
+  /* clear first command-specified bits (for R_REGISTER and W_REGISTER) */
+  reg_addr &= REG_ADDR_BITS;
+
+  if( reg_addr == RX_ADDR_P0_RG || reg_addr == RX_ADDR_P1_RG || reg_addr == TX_ADDR_RG )
+    n_rf24l01_backend_dbg.send_cmd( W_REGISTER | reg_addr, NULL, tmp.char_storage, 5, 1 );
+  else
+    n_rf24l01_backend_dbg.send_cmd( W_REGISTER | reg_addr, NULL, tmp.char_storage, 1, 1 );
 }

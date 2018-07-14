@@ -9,19 +9,21 @@ extern "C" {
  * used directly by a user. The user instead has to use some wrapper/backend
  * to work this the n_rf24l01, like linux,...  */
 
-/* you must set up spi and gpio peripherals before start use the library
+/* you must set up an spi and a gpio peripherals before start use this library
  *
- * spi on n_rf24l01 works with next settings:
+ * spi on the n_rf24l01 works with the next settings:
  *  CPOL = 0, CPHA = 0
  *  msbit first
  *  8 bits per word
  *  spi speed up to 10MHz
  *  CSN - is active low
- *  Note: CSN pin must be hold unchanged during command transaction
- *        (from sending cmd to sending/receiving cmd's data)
+ *  Note: a CSN pin must be hold unchanged during a command transaction
+ *        (cmd + cmd's data)
  *
- * CE - (output pin)
- * IRQ - is active low (input pin) */
+ * CE - (an output pin)
+ * IRQ - is active low (an input pin) */
+
+#include "stdint.h"
 
 typedef unsigned char u_char;
 typedef unsigned int u_int;
@@ -29,7 +31,7 @@ typedef unsigned int u_int;
 typedef void (*set_up_ce_pin_ptr)( u_char value );
 typedef void (*send_cmd_ptr)( u_char cmd, u_char* status_reg, u_char* data, u_char num, u_char direction );
 typedef void (*usleep_ptr)( u_int delay_mks );
-typedef void (*handle_received_data_ptr)( void* data, u_int num );
+typedef void (*handle_received_data_ptr)( const void* data, u_int num );
 
 
 /**
@@ -40,7 +42,7 @@ typedef void (*handle_received_data_ptr)( void* data, u_int num );
 typedef struct n_rf24l01_backend_t
 {
   /**
-   * @brief control CE pin state
+   * @brief control a CE pin state
    *
    * void (*set_up_ce_pin_ptr)( u_char value );
    *
@@ -49,24 +51,29 @@ typedef struct n_rf24l01_backend_t
   set_up_ce_pin_ptr set_up_ce_pin;
 
   /**
-   * @brief send a command to n_rf24l01 over SPI peripheral
+   * @brief send a command to n_rf24l01 over the SPI peripheral
    *
    * void (*send_cmd_ptr)( u_char cmd, u_char* status_reg, u_char* data, u_char num, u_char direction );
    *
    * @param[in]     cmd        - a command to send
    * @param[out]    status_reg - a pointer an n_rf24l01 status register will be written to
-   * @param[in,out] data       - a pointer to data to be written to or to be read from n_rf24l01, depends on @type,
-   *                             a real amount of data to read from/write to is depends on @num parameter
+   * @param[in,out] data       - a pointer to data to be written to or to be read from n_rf24l01, depends on @direction,
+   *                             a real amount of data to read from/write to depends on a @num parameter
    * @param[in]     num        - an amount of bytes to read or write (except a command byte)
    * @param[in]     direction  - a type of an operation: 1 - write, 0 - read
    * @return -1 if failed, 0 otherwise
    *
-   * Note: this function must implement sending command and sending/receiving command's data over spi.
-   *       First you must send a @cmd, retrieve an answer and store it to a @status_reg, and then send @num bytes from @data,
-   *       or receive @num bytes and store to @data depend of a @direction value.
-   *       @status_reg may be NULL - just throw away a respond of first spi transaction (@cmd).
-   *       @num may be 0 - in this case just send a @cmd and store a respond to @status_reg, if @status_reg isn't NULL.
-   *       Memory allocation occurred on calling side.
+   * Note: this function has to send a command and, maybe, send/receive a command's data/response
+   *       at first you have to send a @cmd, retrieve an answer and store it to a @status_reg, if not NULL and then
+   *       send @num bytes from @data or receive @num bytes to @data depend of a @direction value.
+   *       @status_reg may be NULL - just throw away a respond of a first spi transaction (@cmd).
+   *       @num may be 0 - in this case just send a @cmd and store a respond to @status_reg, if @status_reg isn't NULL;
+   *
+   *       memory allocation occurred on a calling side;
+   *       this cb has not to exit till all work has performed;
+   *
+   *       the n_rf24l01 requires a delay (50ns) between switches on a CSN line or, the same, between two communication sessions or,
+   *       the same, between two calls to this cb;
    */
   send_cmd_ptr send_cmd;
 
@@ -87,7 +94,7 @@ typedef struct n_rf24l01_backend_t
   /**
    * @brief handle received data
    *
-   * void (*handle_received_data_ptr)( void* data, u_int num );
+   * void (*handle_received_data_ptr)( const void* data, u_int num );
    *
    * @param[in] data - data received from n_rf24l01
    * @param[in] num  - an amount of received data, in bytes
@@ -97,7 +104,7 @@ typedef struct n_rf24l01_backend_t
 
 } n_rf24l01_backend_t;
 
-// -------------------------------------- IRQ handler --------------------------------------------------
+// -------------------------------------- IRQ handlers --------------------------------------------------
 
 /**
  * @brief an upper half of the n_rf24l01 irq handler
@@ -110,7 +117,7 @@ void n_rf24l01_upper_half_irq( void );
 /**
  * @brief a bottom half of the n_rf24l01 irq handler
  *
- * Note: bottom half mustn't be executed in hardware interrupt context, due to a big execution time
+ * Note: bottom half mustn't be executed in the hardware interrupt context, due to a big execution time
  */
 //======================================================================================================
 void n_rf24l01_bottom_half_irq( void );
@@ -152,6 +159,30 @@ void n_rf24l01_prepare_to_receive( void );
  */
 //======================================================================================================
 void n_rf24l01_transmit_pkgs( const void* data, u_int num );
+
+
+/* for debug purposes only; for values appropriate as reg_addr arguments look
+ * at core/n_rf24l01.h;
+ *
+ * n_rf24l01_init_dbg has to be called only if a dbg-less version wasn't called;
+ *
+ * you can think about these dbg functions as a gdb with -p flag, so you may
+ * read/write registers from an another process leaving all library's initialization
+ * to the main process;
+ *
+ * the library's core can be compiled with a hidden visibility as a default visibility option,
+ * so to make these function always available tag them with the default visibility,
+ * change this if it's not what you need;
+ *
+ * n_rf24l01_init_dbg has to be called anyway if the debug support needed, only a
+ * backend.send_cmd cb should be provided;
+ *
+ * the dbg part of library is completely untied from the main part, but changes you
+ * make writing registers may affect the library's behavior */
+
+int n_rf24l01_init_dbg( const n_rf24l01_backend_t* backend );
+uint64_t n_rf24l01_read_register_dbg( u_char reg_addr ) __attribute__ ((visibility ("default") ));
+void n_rf24l01_write_register_dbg( u_char reg_addr, uint64_t value ) __attribute__ ((visibility ("default") ));
 
 #ifdef __cplusplus
 }
